@@ -123,44 +123,44 @@ def optimized_parse(s):
 def in_language_optimized(s):
     return bool(optimized_parse(s))
 
-def gen_positive():
-    result = ""
-    f = random.randint(0, 3)
-    if f == 3:
-        return "bbabbaabaabaabbbbaabaabaabbabb"
-    if f == 2:
-        v = random.randint(1, 2)
-        v1 = random.randint(1, 2)
-        return "bba" + "bba" * v + "abaaba" + "abb" * v1 + "bba" * v + "abaaba" + "abb" * v1 + "abb"
-    if f == 1:
-        v = random.randint(1, 3)
-        v1 = random.randint(1, 3)
-        return "bba" * v + "abaaba" + "abb" * v1
-    if f == 0:
-        return "aba"
-    return result
+def gen_S(level=0, v=-1):
+    if level == 2:
+        return "aba", 1
+    case = random.randint(1, 100)
+    if case <= 40 and (v == -1 or v == 0):
+        w, _ = gen_S(level=level + 1)
+        return "bb" * random.randint(1, 3) + w, 0
+    if 40 <= case <= 80 and (v == -1 or v == 1):
+        return "aba", 1
+    res = ""
+    if v != -1 and v != 0:
+        v3, v4 = v, v + 1
+    else:
+        v3, v4 = random.randint(1, 3), random.randint(1, 3)
+    S1, v1 = gen_S(level=level + 1)
+    S2, _ = gen_S(level=level + 1, v=v1)
+    if v == 0:
+        res += "bb" * random.randint(1, 3)
+    return res + "bba" * v3 + S1 + S2 + "abb" * v4, min(v3, v4) * (v != 0)
 
 def generate_positive_set(n):
     res = set()
     while len(res) < n:
-        res.add(gen_positive())
+        w, _ = gen_S()
+        if len(w) <= 40:
+            res.add(w)
     return list(res)
 
-def gen_negative():
-    result = gen_positive()
-    while in_language_optimized(result):
-        seq = ''.join(random.choice(['a', 'b']) for _ in range(random.randint(1, 3)))
-        pos = random.randint(0, len(result))
-        result = result[:pos] + seq + result[pos:]
+def generate_random_word(length):
+    return ''.join(random.choice(['a', 'b']) for i in range(length))
 
-    return result
-
-def generate_negative_set(n, max_blocks=3):
+def generate_negative_set(n, min_l, max_l):
     res = set()
     while len(res) < n:
-        res.add(gen_negative())
+        w = generate_random_word(random.randint(min_l, max_l))
+        if not in_language_optimized(w):
+            res.add(w)
     return list(res)
-
 
 def run_benchmark(words):
     results = []
@@ -175,7 +175,6 @@ def run_benchmark(words):
         t1 = time.perf_counter()
         rec['naive_res'] = res_naive
         rec['naive_time_ms'] = (t1 - t0) * 1000.0
-
         t0 = time.perf_counter()
         res_opt = in_language_optimized(w)
         t1 = time.perf_counter()
@@ -237,12 +236,11 @@ def plot_benchmark(results, title):
     plt.grid(True)
     plt.show()
 
-random.seed(123)
-
+#random.seed(123)
 print("\nБатч слов из языка")
-positive_results = run_benchmark(generate_positive_set(7))
+positive_results = run_benchmark(generate_positive_set(10))
 print("\nБатч слов не из языка")
-negative_results = run_benchmark(generate_negative_set(7))
+negative_results = run_benchmark(generate_negative_set(10, 10, 30))
 
 plot_benchmark(positive_results, "Сравнение скорости: слова из языка")
 plot_benchmark(negative_results, "Сравнение скорости: слова не из языка")
